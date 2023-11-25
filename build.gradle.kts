@@ -29,14 +29,15 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib"))
+	implementation(kotlin("reflect"))
+	testImplementation(kotlin("test"))
 
-    implementation("com.kotlindiscord.kord.extensions:kord-extensions:1.7.0-SNAPSHOT")
+	implementation("com.kotlindiscord.kord.extensions:kord-extensions:1.7.0-SNAPSHOT")
+	implementation("com.kotlindiscord.kord.extensions:adapter-mongodb:1.7.0-SNAPSHOT")
 
-    implementation("org.slf4j:slf4j-simple:2.0.9")
+	implementation("org.slf4j:slf4j-simple:2.0.9")
 
 	implementation("org.mongodb:mongodb-driver-kotlin-coroutine:4.11.1")
-
-    testImplementation(kotlin("test"))
 }
 
 tasks {
@@ -45,7 +46,7 @@ tasks {
     }
 
     jar {
-        manifest.attributes("Main-Class" to "compass_system.compass_plural_bot.MainKt")
+        manifest.attributes("Main-Class" to "compass_system.compass_plural_bot.EntryKt")
     }
 
     withType<KotlinCompile> {
@@ -58,5 +59,5 @@ tasks {
 }
 
 application {
-    mainClass.set("compass_system.compass_plural_bot.MainKt")
+    mainClass.set("compass_system.compass_plural_bot.EntryKt")
 }
