@@ -16,16 +16,15 @@ import com.kotlindiscord.kord.extensions.extensions.event
 import com.mongodb.kotlin.client.coroutine.MongoDatabase
 import compass_system.compass_plural_bot.database.getSingleton
 import compass_system.compass_plural_bot.database.upsertSingleton
-import dev.kord.common.entity.ButtonStyle
-import dev.kord.common.entity.DiscordPartialEmoji
-import dev.kord.common.entity.Permission
-import dev.kord.common.entity.Snowflake
+import dev.kord.common.entity.*
 import dev.kord.core.behavior.channel.createEmbed
 import dev.kord.core.behavior.channel.createMessage
 import dev.kord.core.behavior.edit
+import dev.kord.core.behavior.interaction.modal
 import dev.kord.core.behavior.interaction.respondEphemeral
 import dev.kord.core.entity.channel.MessageChannel
 import dev.kord.core.event.interaction.ButtonInteractionCreateEvent
+import dev.kord.core.event.interaction.ModalSubmitInteractionCreateEvent
 import dev.kord.rest.builder.message.EmbedBuilder
 import dev.kord.rest.builder.message.actionRow
 import dev.kord.rest.builder.message.embed
@@ -48,11 +47,13 @@ data class TaskExtensionSettings(
 	val estrogenDayCheckDate: LocalDate? = null,
 	val courseraCoursesCompleted: UInt? = null,
 	val totalCourseraCourses: UInt? = null,
-	val courseraFinishDate: LocalDate? = null
+	val courseraFinishDate: LocalDate? = null,
+	val antiAndrogenCutCount: UInt? = null,
+	val antiAndrogenCount: UInt? = null,
 )
 
-class TaskExtension : Extension() {
-	override val name = "TaskExtension"
+class ReminderExtension : Extension() {
+	override val name = "ReminderExtension"
 
 	private val database: MongoDatabase by inject()
 	private var settings: TaskExtensionSettings? = null
@@ -62,8 +63,8 @@ class TaskExtension : Extension() {
 
 	override suspend fun setup() {
 		ephemeralSlashCommand {
-			name = "task"
-			description = "Task extension commands"
+			name = "reminders"
+			description = "Reminder extension commands"
 
 			check { hasPermission(Permission.Administrator) }
 
@@ -80,19 +81,43 @@ class TaskExtension : Extension() {
 
 				action { createCourseraEmbed() }
 			}
+
+			ephemeralSubCommand(::CreateAntiAndrogenEmbedArgs) {
+				name = "create-anti-androgen-embed"
+				description = "Create the anti-androgen embed"
+
+				action { createAntiAndrogenEmbed() }
+			}
+		}
+
+		val buttonEvents = buildMap<String, suspend EventContext<ButtonInteractionCreateEvent>.() -> Unit> {
+			put("coursera_embed:complete_course") { courseComplete() }
+			put("anti_androgen_embed:use") { useAntiAndrogen() }
+			put("anti_androgen_embed:cut") { cutAntiAndrogen() }
+			put("anti_androgen_embed:add") { addAntiAndrogensButton() }
 		}
 
 		event<ButtonInteractionCreateEvent> {
 			check {
-				failIfNot(event.interaction.componentId == "coursera_embed:complete_course")
+				failIfNot(event.interaction.componentId in buttonEvents)
 
 				hasPermission(Permission.Administrator)
 			}
 
-			action { courseComplete() }
+			action { buttonEvents[event.interaction.componentId]?.invoke(this) }
 		}
 
-		settings = database.getSingleton("tasks", TaskExtensionSettings::class.java)
+		event<ModalSubmitInteractionCreateEvent> {
+			check {
+				failIfNot(event.interaction.modalId == "anti_androgen_embed:add_modal")
+			}
+
+			action {
+				addAntiAndrogensModal()
+			}
+		}
+
+		settings = database.getSingleton("reminders", TaskExtensionSettings::class.java)
 
 		scheduleEstrogenEmbedUpdate()
 	}
@@ -106,7 +131,7 @@ class TaskExtension : Extension() {
 			totalCourseraCourses = arguments.completed.toUInt() + arguments.remaining.toUInt(),
 			courseraFinishDate = arguments.endDate
 		).also {
-			database.upsertSingleton("tasks", TaskExtensionSettings::class.java, it)
+			database.upsertSingleton("reminders", TaskExtensionSettings::class.java, it)
 		}
 
 		event.interaction.getChannel().createMessage {
@@ -158,7 +183,7 @@ class TaskExtension : Extension() {
 		} ?: return
 
 		settings = localSettings.also {
-			database.upsertSingleton("tasks", TaskExtensionSettings::class.java, it)
+			database.upsertSingleton("reminders", TaskExtensionSettings::class.java, it)
 		}
 
 		if (localSettings.courseraCoursesCompleted == localSettings.totalCourseraCourses) {
@@ -196,7 +221,7 @@ class TaskExtension : Extension() {
 			estrogenDayCheck = arguments.leg,
 			estrogenDayCheckDate = Clock.System.now().toLocalDateTime(timeZone).date
 		).also {
-			database.upsertSingleton("tasks", TaskExtensionSettings::class.java, it)
+			database.upsertSingleton("reminders", TaskExtensionSettings::class.java, it)
 		}
 
 		respond { content = "Estrogen embed created." }
@@ -265,6 +290,175 @@ class TaskExtension : Extension() {
 		executor.scheduleAtFixedRate(::updateEstrogenEmbed, delay, 1.days.inWholeSeconds, TimeUnit.SECONDS)
 	}
 	//#endregion
+	//#region // Anti-Androgen Embed
+	private suspend fun EphemeralSlashCommandContext<CreateAntiAndrogenEmbedArgs, ModalForm>.createAntiAndrogenEmbed() {
+		val localSettings = settings ?: TaskExtensionSettings()
+
+		settings = localSettings.copy(
+			antiAndrogenCutCount = arguments.cutCount.toUInt(),
+			antiAndrogenCount = arguments.uncutCount.toUInt()
+		).also {
+			database.upsertSingleton("reminders", TaskExtensionSettings::class.java, it)
+		}
+
+		event.interaction.getChannel().createMessage {
+			embed { buildAntiAndrogenEmbed(settings!!) }
+			actionRow {
+				interactionButton(ButtonStyle.Primary, "anti_androgen_embed:use") {
+					label = "Use"
+					emoji = DiscordPartialEmoji(name = "💊")
+				}
+				interactionButton(ButtonStyle.Primary, "anti_androgen_embed:cut") {
+					label = "Cut"
+					emoji = DiscordPartialEmoji(name = "✂️")
+				}
+				interactionButton(ButtonStyle.Primary, "anti_androgen_embed:add") {
+					label = "Add"
+					emoji = DiscordPartialEmoji(name = "📦")
+				}
+			}
+		}
+
+		respond { content = "Anti-androgen embed created." }
+	}
+
+	private fun EmbedBuilder.buildAntiAndrogenEmbed(settings: TaskExtensionSettings) {
+		if (
+			settings.antiAndrogenCutCount == null ||
+			settings.antiAndrogenCount == null
+		) {
+			return
+		}
+
+		val cutCount = settings.antiAndrogenCutCount
+		val cutString = if (cutCount == 1u) {
+			"**${cutCount}** day"
+		} else {
+			"**${cutCount}** days"
+		}
+
+		val uncutString = run {
+			val uncutCount = settings.antiAndrogenCount * 4u
+			val uncutWeeks = uncutCount / 7u
+			val uncutDays = uncutCount - (uncutWeeks * 7u)
+
+			val weekString = when (uncutWeeks) {
+				0u -> ""
+				1u -> "**${uncutWeeks}** week"
+				else -> "**${uncutWeeks}** weeks"
+			}
+			val dayString = when (uncutDays) {
+				0u -> ""
+				1u -> "**${uncutDays}** day"
+				else -> "**${uncutDays}** days"
+			}
+
+			if (weekString.isEmpty() && dayString.isEmpty()) {
+				"**0** days"
+			} else if (weekString.isEmpty()) {
+				dayString
+			} else if (dayString.isEmpty()) {
+				weekString
+			} else {
+				"$weekString and $dayString"
+			}
+		}
+
+		title = "Anti-androgen reminder"
+		description = "You have $cutString prepared and $uncutString remaining."
+		color = DISCORD_BLURPLE
+		timestamp = Clock.System.now()
+	}
+
+	private suspend fun EventContext<ButtonInteractionCreateEvent>.useAntiAndrogen() {
+		val localSettings = settings ?: return
+
+		localSettings.antiAndrogenCutCount ?: return
+
+		if (localSettings.antiAndrogenCutCount == 0u) {
+			event.interaction.respondEphemeral { content = "You have no anti-androgens prepared." }
+
+			return
+		}
+
+		settings = localSettings.copy(
+			antiAndrogenCutCount = localSettings.antiAndrogenCutCount - 1u,
+		).also {
+			database.upsertSingleton("reminders", TaskExtensionSettings::class.java, it)
+		}
+
+		event.interaction.message.edit {
+			embed { buildAntiAndrogenEmbed(settings!!) }
+		}
+
+		event.interaction.respondEphemeral { content = "Anti-androgen used." }
+	}
+
+	private suspend fun EventContext<ButtonInteractionCreateEvent>.cutAntiAndrogen() {
+		val localSettings = settings ?: return
+
+		if (
+			localSettings.antiAndrogenCutCount == null ||
+			localSettings.antiAndrogenCount == null
+		) {
+			return
+		}
+
+		if (localSettings.antiAndrogenCount == 0u) {
+			event.interaction.respondEphemeral { content = "You have no anti-androgens remaining." }
+
+			return
+		}
+
+		settings = localSettings.copy(
+			antiAndrogenCutCount = localSettings.antiAndrogenCutCount + 4u,
+			antiAndrogenCount = localSettings.antiAndrogenCount - 1u
+		).also {
+			database.upsertSingleton("reminders", TaskExtensionSettings::class.java, it)
+		}
+
+		event.interaction.message.edit {
+			embed { buildAntiAndrogenEmbed(settings!!) }
+		}
+
+		event.interaction.respondEphemeral { content = "Anti-androgen cut." }
+	}
+
+	private suspend fun EventContext<ButtonInteractionCreateEvent>.addAntiAndrogensButton() {
+		event.interaction.modal("Add anti-androgens", "anti_androgen_embed:add_modal") {
+			actionRow {
+				textInput(TextInputStyle.Short, "anti_androgen_embed:add_amount", "Amount") {
+					required = true
+					allowedLength = 0..3
+				}
+			}
+		}
+	}
+
+	private suspend fun EventContext<ModalSubmitInteractionCreateEvent>.addAntiAndrogensModal() {
+		val amount = event.interaction.textInputs["anti_androgen_embed:add_amount"]?.value?.toUInt() ?: return
+
+		val localSettings = settings ?: return
+
+		localSettings.antiAndrogenCount ?: return
+
+		settings = localSettings.copy(
+			antiAndrogenCount = localSettings.antiAndrogenCount + amount
+		).also {
+			database.upsertSingleton("reminders", TaskExtensionSettings::class.java, it)
+		}
+
+		event.interaction.message?.edit {
+			embed { buildAntiAndrogenEmbed(settings!!) }
+		}
+
+		event.interaction.respondEphemeral { content = "$amount anti-androgens added." }
+	}
+
+//	private suspend fun EphemeralSlashCommandContext<NewAntiAndrogensArgs, ModalForm>.incrementAntiAndrogenCount() {
+//		respond { content = "" }
+//	}
+	//#endregion
 }
 
 class CreateEstrogenEmbedArgs : Arguments() {
@@ -295,3 +489,22 @@ class CreateCourseraEmbedArgs : Arguments() {
 		description = "The deadline to finish courses by."
 	}
 }
+
+class CreateAntiAndrogenEmbedArgs : Arguments() {
+	val cutCount by int {
+		name = "cut-count"
+		description = "The number of uncut anti-androgens."
+	}
+
+	val uncutCount by int {
+		name = "uncut-count"
+		description = "The number of uncut anti-androgens."
+	}
+}
+
+//class NewAntiAndrogensArgs : Arguments() {
+//	val count by int {
+//		name = "count"
+//		description = "The number of anti-androgens to add to the uncut count."
+//	}
+//}

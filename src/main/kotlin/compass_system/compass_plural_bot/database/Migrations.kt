@@ -1,12 +1,18 @@
 package compass_system.compass_plural_bot.database
 
+import com.mongodb.MongoNamespace
 import com.mongodb.kotlin.client.coroutine.MongoDatabase
+import compass_system.compass_plural_bot.extensions.TaskExtensionSettings
 import kotlin.reflect.full.callSuspend
 import kotlin.reflect.full.declaredFunctions
 
 object Migrations {
 	suspend fun v1(database: MongoDatabase) {
 		database.createCollection("tasks")
+	}
+
+	suspend fun v2(database: MongoDatabase) {
+		database.getCollection<TaskExtensionSettings>("tasks").renameCollection(MongoNamespace("compass_plural_bot.reminders"))
 	}
 
 	suspend fun runAfter(currentVersion: UInt, database: MongoDatabase, onMigrated: suspend (version: UInt) -> Unit) {

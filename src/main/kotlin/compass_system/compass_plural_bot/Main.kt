@@ -10,7 +10,7 @@ import com.mongodb.MongoClientSettings
 import com.mongodb.kotlin.client.coroutine.MongoClient
 import com.mongodb.kotlin.client.coroutine.MongoDatabase
 import compass_system.compass_plural_bot.database.*
-import compass_system.compass_plural_bot.extensions.TaskExtension
+import compass_system.compass_plural_bot.extensions.ReminderExtension
 import org.koin.dsl.bind
 import org.bson.codecs.configuration.CodecRegistries
 
@@ -40,7 +40,7 @@ object Main {
 			}
 
 			extensions {
-				add(::TaskExtension)
+				add(::ReminderExtension)
 			}
 		}
 
