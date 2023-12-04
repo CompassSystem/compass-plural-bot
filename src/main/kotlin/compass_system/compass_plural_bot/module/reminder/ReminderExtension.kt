@@ -1,4 +1,4 @@
-package compass_system.compass_plural_bot.extensions
+package compass_system.compass_plural_bot.module.reminder
 
 import com.kotlindiscord.kord.extensions.DISCORD_BLURPLE
 import com.kotlindiscord.kord.extensions.checks.hasPermission
@@ -6,6 +6,7 @@ import com.kotlindiscord.kord.extensions.commands.Arguments
 import com.kotlindiscord.kord.extensions.commands.application.slash.EphemeralSlashCommandContext
 import com.kotlindiscord.kord.extensions.commands.application.slash.converters.impl.stringChoice
 import com.kotlindiscord.kord.extensions.commands.application.slash.ephemeralSubCommand
+import com.kotlindiscord.kord.extensions.commands.converters.impl.boolean
 import com.kotlindiscord.kord.extensions.commands.converters.impl.int
 import com.kotlindiscord.kord.extensions.components.components
 import com.kotlindiscord.kord.extensions.components.forms.ModalForm
@@ -87,6 +88,26 @@ class ReminderExtension : Extension() {
 				description = "Create the anti-androgen embed"
 
 				action { createAntiAndrogenEmbed() }
+			}
+
+			ephemeralSubCommand(::CreateTestEmbedArgs) {
+				name = "create-test-embed"
+				description = "Create the test embed"
+
+				action {
+					event.interaction.getChannel().createMessage {
+						embed {
+							title = "Test embed"
+							description = "This is a test embed. <:star_empty:1179024220861243452>"
+							color = DISCORD_BLURPLE
+							field {
+								name = "Complete"
+								value = "<:star_empty:1179024220861243452>"
+							}
+							timestamp = Clock.System.now()
+						}
+					}
+				}
 			}
 		}
 
@@ -502,9 +523,9 @@ class CreateAntiAndrogenEmbedArgs : Arguments() {
 	}
 }
 
-//class NewAntiAndrogensArgs : Arguments() {
-//	val count by int {
-//		name = "count"
-//		description = "The number of anti-androgens to add to the uncut count."
-//	}
-//}
+class CreateTestEmbedArgs : Arguments() {
+	val complete by boolean {
+		name = "complete"
+		description = "Whether the task is complete."
+	}
+}

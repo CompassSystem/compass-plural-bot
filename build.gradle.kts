@@ -35,6 +35,11 @@ dependencies {
 	implementation("com.kotlindiscord.kord.extensions:kord-extensions:1.7.0-SNAPSHOT")
 	implementation("com.kotlindiscord.kord.extensions:adapter-mongodb:1.7.0-SNAPSHOT")
 
+	val ktorVersion = "2.3.6"
+
+	implementation("io.ktor:ktor-client-core:$ktorVersion")
+	implementation("io.ktor:ktor-client-cio:$ktorVersion")
+
 	implementation("org.slf4j:slf4j-simple:2.0.9")
 
 	implementation("org.mongodb:mongodb-driver-kotlin-coroutine:4.11.1")

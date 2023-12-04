@@ -1,4 +1,4 @@
-package compass_system.compass_plural_bot.extensions
+package compass_system.compass_plural_bot.module.reminder
 
 import com.kotlindiscord.kord.extensions.DiscordRelayedException
 import com.kotlindiscord.kord.extensions.commands.Argument
@@ -7,7 +7,6 @@ import com.kotlindiscord.kord.extensions.commands.CommandContext
 import com.kotlindiscord.kord.extensions.commands.converters.SingleConverter
 import com.kotlindiscord.kord.extensions.commands.converters.Validator
 import com.kotlindiscord.kord.extensions.commands.converters.builders.ConverterBuilder
-import com.kotlindiscord.kord.extensions.i18n.DEFAULT_KORDEX_BUNDLE
 import com.kotlindiscord.kord.extensions.parser.StringParser
 import dev.kord.core.entity.interaction.OptionValue
 import dev.kord.core.entity.interaction.StringOptionValue
@@ -15,7 +14,6 @@ import dev.kord.rest.builder.interaction.OptionsBuilder
 import dev.kord.rest.builder.interaction.StringChoiceBuilder
 import kotlinx.datetime.LocalDate
 import java.lang.NumberFormatException
-
 
 fun Arguments.localDate(
 	body: LocalDateConverterBuilder.() -> Unit
