@@ -180,7 +180,7 @@ class ReminderExtension : Extension() {
 		val remainingCourses = settings.totalCourseraCourses - settings.courseraCoursesCompleted
 		val daysUntilEnd = Clock.System.now().toLocalDateTime(timeZone).date.daysUntil(settings.courseraFinishDate)
 
-		val perWeek = ceil(daysUntilEnd / remainingCourses.toDouble()).toInt()
+		val perWeek = ceil(7 * remainingCourses.toDouble() / daysUntilEnd).toInt()
 
 		val endDateAsString = settings.courseraFinishDate.let {
 			"${it.dayOfMonth.toString().padStart(2, '0')}/${it.monthNumber.toString().padStart(2, '0')}/${it.year}"
