@@ -9,6 +9,8 @@ import com.kotlindiscord.kord.extensions.commands.converters.impl.optionalString
 import com.kotlindiscord.kord.extensions.components.forms.ModalForm
 import com.kotlindiscord.kord.extensions.extensions.Extension
 import com.kotlindiscord.kord.extensions.extensions.ephemeralSlashCommand
+import compass_system.compass_plural_bot.module.pluralkit.PluralKitExtension
+import compass_system.compass_plural_bot.module.pluralkit.PluralKitModule
 import dev.kord.common.Color
 import dev.kord.common.entity.Permission
 import dev.kord.common.entity.Snowflake
@@ -16,22 +18,12 @@ import dev.kord.core.behavior.channel.asChannelOfOrNull
 import dev.kord.core.behavior.channel.createEmbed
 import dev.kord.core.entity.channel.TextChannel
 import dev.kord.core.supplier.EntitySupplyStrategy
-import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.request.*
-import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.flow.filter
-import kotlinx.serialization.json.Json
-import mu.KotlinLogging
 
-class HeadmateLabellerExtension(private val pluralKitToken: String) : Extension() {
-	override val name = "HeadmateLabellerExtension"
-	private val apiBaseUrl = "https://api.pluralkit.me/v2"
-	private val logger = KotlinLogging.logger("headmate-labeller")
-	private var system: PkSystem? = null
+class HeadmateLabellerExtension : Extension() {
+	override val name = HeadmateLabellerModule.getId()
+
+	private val pluralKit by lazy { bot.extensions[PluralKitModule.getId()] as PluralKitExtension }
 
 	override suspend fun setup() {
 		ephemeralSlashCommand {
@@ -53,34 +45,13 @@ class HeadmateLabellerExtension(private val pluralKitToken: String) : Extension(
 
 				action { purgeHeadmateList() }
 			}
-
-			ephemeralSubCommand {
-				name = "refresh"
-				description = "Refresh the PluralKit system cache."
-
-				action { refreshSystem() }
-			}
-		}
-
-		system = try {
-			getPluralKitSystem()
-		} catch (e: Exception) {
-			logger.error(e) { "Failed to get PluralKit system." }
-
-			null
 		}
 	}
 
 	private suspend fun EphemeralSlashCommandContext<IgnoredHeadmateArgs, ModalForm>.upsertHeadmateList() {
 		val headmatesToIgnore = arguments.ignore?.lowercase()?.split(",")?.toSet() ?: emptySet()
 
-		val system = this@HeadmateLabellerExtension.system ?: run {
-			respond {
-				content = "Error, previously failed to get PluralKit system. Please run `/headmate-labeller refresh` first."
-			}
-
-			return
-		}
+		val system = pluralKit.getSystem()
 
 		val channel = this.getChannel().asChannelOfOrNull<TextChannel>() ?: run {
 			respond {
@@ -202,13 +173,7 @@ class HeadmateLabellerExtension(private val pluralKitToken: String) : Extension(
 	private suspend fun EphemeralSlashCommandContext<IgnoredHeadmateArgs, ModalForm>.purgeHeadmateList() {
 		val headmatesToIgnore = arguments.ignore?.lowercase()?.split(",")?.toSet() ?: emptySet()
 
-		val system = this@HeadmateLabellerExtension.system ?: run {
-			respond {
-				content = "Error, previously failed to get PluralKit system. Please run `/headmate-labeller refresh` first."
-			}
-
-			return
-		}
+		val system = pluralKit.getSystem()
 
 		val channel = this.getChannel().asChannelOfOrNull<TextChannel>() ?: run {
 			respond {
@@ -244,52 +209,6 @@ class HeadmateLabellerExtension(private val pluralKitToken: String) : Extension(
 		respond {
 			content = "Deleted $deletedCount headmate embeds."
 		}
-	}
-
-	private suspend fun EphemeralSlashCommandContext<Arguments, ModalForm>.refreshSystem() {
-		system = try {
-			getPluralKitSystem()
-		} catch (e: Exception) {
-			respond {
-				content = "Failed to refresh the PluralKit system."
-			}
-
-			logger.error(e) { "Failed to refresh the PluralKit system." }
-
-			return
-		}
-
-		respond {
-			content = "Refreshed PluralKit system."
-		}
-	}
-
-	private suspend fun getPluralKitSystem(): PkSystem {
-		val client = HttpClient(CIO) {
-			defaultRequest {
-				headers {
-					append("Authorization", pluralKitToken)
-					append("User-Agent", "headmate-labeller/2.0.0")
-				}
-			}
-
-			install(ContentNegotiation) {
-				json(Json {
-					ignoreUnknownKeys = true
-				})
-			}
-		}
-
-		val system = client.get("${apiBaseUrl}/systems/@me").body<PkSystem>()
-		val members = client.get("${apiBaseUrl}/systems/@me/members").body<List<PkMember>>()
-
-		return PkSystem(
-			system.id,
-			system.name,
-			system.tag,
-			members,
-			system.avatarUrl
-		)
 	}
 }
 

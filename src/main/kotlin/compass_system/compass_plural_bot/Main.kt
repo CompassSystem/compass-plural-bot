@@ -14,6 +14,8 @@ import com.mongodb.kotlin.client.coroutine.MongoDatabase
 import compass_system.compass_plural_bot.database.*
 import compass_system.compass_plural_bot.module.BotModule
 import compass_system.compass_plural_bot.module.headmate_labeller.HeadmateLabellerModule
+import compass_system.compass_plural_bot.module.headmate_store.HeadmateStoreModule
+import compass_system.compass_plural_bot.module.pluralkit.PluralKitModule
 import compass_system.compass_plural_bot.module.reminder.ReminderModule
 import kotlinx.coroutines.flow.firstOrNull
 import org.koin.dsl.bind
@@ -21,7 +23,6 @@ import org.bson.codecs.configuration.CodecRegistries
 
 object Main {
 	private val DISCORD_TOKEN = env("DISCORD_TOKEN")
-	private val PLURALKIT_TOKEN = env("PLURALKIT_TOKEN")
 	private val TEST_GUILD = envOrNull("TEST_GUILD")
 	private val MONGODB_CONNECTION_URI = env("MONGODB_CONNECTION_URI")
 
@@ -30,7 +31,7 @@ object Main {
 	suspend fun main(args: Array<String>) {
 		val database = createDatabase()
 
-		val modules: List<BotModule> = listOf(ReminderModule, HeadmateLabellerModule(PLURALKIT_TOKEN))
+		val modules: List<BotModule> = listOf(ReminderModule, PluralKitModule, HeadmateLabellerModule, HeadmateStoreModule)
 
 		val metadata = database.getCollection<Metadata>("metadata")
 

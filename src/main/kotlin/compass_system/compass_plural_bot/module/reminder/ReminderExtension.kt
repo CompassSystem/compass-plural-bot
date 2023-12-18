@@ -54,7 +54,7 @@ data class TaskExtensionSettings(
 )
 
 class ReminderExtension : Extension() {
-	override val name = "ReminderExtension"
+	override val name = ReminderModule.getId()
 
 	private val database: MongoDatabase by inject()
 	private var settings: TaskExtensionSettings? = null
