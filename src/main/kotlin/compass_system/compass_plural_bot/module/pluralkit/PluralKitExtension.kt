@@ -1,13 +1,11 @@
 package compass_system.compass_plural_bot.module.pluralkit
 
-import com.kotlindiscord.kord.extensions.checks.hasPermission
 import com.kotlindiscord.kord.extensions.commands.Arguments
 import com.kotlindiscord.kord.extensions.commands.application.slash.EphemeralSlashCommandContext
 import com.kotlindiscord.kord.extensions.commands.application.slash.ephemeralSubCommand
 import com.kotlindiscord.kord.extensions.components.forms.ModalForm
 import com.kotlindiscord.kord.extensions.extensions.Extension
 import com.kotlindiscord.kord.extensions.extensions.ephemeralSlashCommand
-import dev.kord.common.entity.Permission
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
@@ -41,8 +39,6 @@ class PluralKitExtension(private val pluralKitToken: String) : Extension() {
 		ephemeralSlashCommand {
 			name = "pluralbot"
 			description = "PluralKit commands."
-
-			check { hasPermission(Permission.Administrator) }
 
 			ephemeralSubCommand {
 				name = "refresh"

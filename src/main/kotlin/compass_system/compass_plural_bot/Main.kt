@@ -17,6 +17,7 @@ import compass_system.compass_plural_bot.module.headmate_labeller.HeadmateLabell
 import compass_system.compass_plural_bot.module.headmate_store.HeadmateStoreModule
 import compass_system.compass_plural_bot.module.pluralkit.PluralKitModule
 import compass_system.compass_plural_bot.module.reminder.ReminderModule
+import dev.kord.common.entity.Snowflake
 import kotlinx.coroutines.flow.firstOrNull
 import org.koin.dsl.bind
 import org.bson.codecs.configuration.CodecRegistries
@@ -48,6 +49,9 @@ object Main {
 		val bot = ExtensibleBot(DISCORD_TOKEN) {
 			applicationCommands {
 				defaultGuild(TEST_GUILD)
+				slashCommandCheck {
+					failIfNot(event.interaction.user.id == Snowflake("151749735647150080"), "Must be the Compasses to use this command.")
+				}
 			}
 
 			hooks {

@@ -1,7 +1,6 @@
 package compass_system.compass_plural_bot.module.headmate_store
 
 import com.kotlindiscord.kord.extensions.DISCORD_BLURPLE
-import com.kotlindiscord.kord.extensions.checks.hasPermission
 import com.kotlindiscord.kord.extensions.commands.Arguments
 import com.kotlindiscord.kord.extensions.commands.application.slash.EphemeralSlashCommandContext
 import com.kotlindiscord.kord.extensions.commands.application.slash.ephemeralSubCommand
@@ -13,7 +12,6 @@ import compass_system.compass_plural_bot.module.pluralkit.PartialMember
 import compass_system.compass_plural_bot.module.pluralkit.PluralKitExtension
 import compass_system.compass_plural_bot.module.pluralkit.PluralKitModule
 import dev.kord.common.Color
-import dev.kord.common.entity.Permission
 import dev.kord.rest.builder.message.embed
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -33,8 +31,6 @@ class HeadmateStoreExtension : Extension() {
 		ephemeralSlashCommand {
 			name = "headmate-store"
 			description = "Headmate store commands."
-
-			check { hasPermission(Permission.Administrator) }
 
 			ephemeralSubCommand(::HeadmateArgs) {
 				name = "export"

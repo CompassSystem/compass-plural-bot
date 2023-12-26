@@ -30,8 +30,6 @@ class HeadmateLabellerExtension : Extension() {
 			name = "headmate-labeller"
 			description = "Headmate labeller commands."
 
-			check { hasPermission(Permission.Administrator) }
-
 			ephemeralSubCommand(::IgnoredHeadmateArgs) {
 				name = "list"
 				description = "Create or update a list of headmates."

@@ -67,8 +67,6 @@ class ReminderExtension : Extension() {
 			name = "reminders"
 			description = "Reminder extension commands"
 
-			check { hasPermission(Permission.Administrator) }
-
 			ephemeralSubCommand(::CreateEstrogenEmbedArgs) {
 				name = "create-estrogen-embed"
 				description = "Create the estrogen embed"
