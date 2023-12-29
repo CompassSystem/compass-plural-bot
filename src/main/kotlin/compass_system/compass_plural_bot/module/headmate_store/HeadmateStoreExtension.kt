@@ -4,6 +4,7 @@ import com.kotlindiscord.kord.extensions.DISCORD_BLURPLE
 import com.kotlindiscord.kord.extensions.commands.Arguments
 import com.kotlindiscord.kord.extensions.commands.application.slash.EphemeralSlashCommandContext
 import com.kotlindiscord.kord.extensions.commands.application.slash.ephemeralSubCommand
+import com.kotlindiscord.kord.extensions.commands.converters.impl.optionalBoolean
 import com.kotlindiscord.kord.extensions.commands.converters.impl.string
 import com.kotlindiscord.kord.extensions.components.forms.ModalForm
 import com.kotlindiscord.kord.extensions.extensions.Extension
@@ -32,11 +33,18 @@ class HeadmateStoreExtension : Extension() {
 			name = "headmate-store"
 			description = "Headmate store commands."
 
-			ephemeralSubCommand(::HeadmateArgs) {
+			ephemeralSubCommand(::HeadmateExportArgs) {
 				name = "export"
 				description = "Exports a headmate from PluralKit to the store."
 
 				action { exportHeadmate() }
+			}
+
+			ephemeralSubCommand {
+				name = "exportall"
+				description = "Exports all headmates from PluralKit to the store."
+
+				action { exportAllHeadmates() }
 			}
 
 			ephemeralSubCommand(::HeadmateArgs) {
@@ -62,16 +70,18 @@ class HeadmateStoreExtension : Extension() {
 		}
 	}
 
-	private suspend fun EphemeralSlashCommandContext<HeadmateArgs, ModalForm>.exportHeadmate() {
+	private suspend fun EphemeralSlashCommandContext<HeadmateExportArgs, ModalForm>.exportHeadmate() {
 		val system = pluralKit.getSystem()
 		val headmateName = arguments.name
 
 		val headmate = system.members.firstOrNull { it.name == headmateName } ?: return respond { content = "$headmateName is not present in the PluralKit system." }.let {  }
 
-		try {
-		    pluralKit.deleteMember(headmate.id)
-		} catch (e: IllegalStateException) {
-			return respond { content = "Failed to delete $headmateName received ${e.message}." }.let {  }
+		if (arguments.delete == true) {
+			try {
+				pluralKit.deleteMember(headmate.id)
+			} catch (e: IllegalStateException) {
+				return respond { content = "Failed to delete $headmateName received ${e.message}." }.let {  }
+			}
 		}
 
 		system.members.removeIf { it.name == headmateName }
@@ -87,6 +97,24 @@ class HeadmateStoreExtension : Extension() {
 		}
 
 		respond { content = "Exported $headmateName into the store." }
+	}
+
+	private suspend fun EphemeralSlashCommandContext<Arguments, ModalForm>.exportAllHeadmates() {
+		val system = pluralKit.getSystem()
+
+		system.members.forEach { headmate ->
+			val path = Path.of("headmates", "${headmate.name}.json")
+			val data = PluralKitModule.json.encodeToString(PartialMember.serializer(), headmate.asPartial())
+
+			withContext(Dispatchers.IO) {
+				Files.newBufferedWriter(path, Charsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
+			}.use {
+				it.write(data)
+				it.flush()
+			}
+		}
+
+		respond { content = "Exported all ${system.members.size} headmates into the store." }
 	}
 
 	private suspend fun EphemeralSlashCommandContext<HeadmateArgs, ModalForm>.restoreHeadmate() {
@@ -200,6 +228,17 @@ class HeadmateStoreExtension : Extension() {
 		}
 
 		return PluralKitModule.json.decodeFromString<PartialMember>(path.readText(Charsets.UTF_8))
+	}
+}
+
+class HeadmateExportArgs: Arguments() {
+	val name by string {
+		name = "name"
+		description = "Name of the headmate."
+	}
+	val delete by optionalBoolean {
+		name = "delete"
+		description = "Delete the headmate from PluralKit after exporting."
 	}
 }
 
